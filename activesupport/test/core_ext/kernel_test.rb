@@ -38,6 +38,20 @@ class KernelTest < ActiveSupport::TestCase
     # Skip if we can't STDERR.tell
   end
 
+  def test_silence_stream
+    old_stream_position = STDOUT.tell
+    silence_stream(STDOUT) { STDOUT.puts 'hello world' }
+    assert_equal old_stream_position, STDOUT.tell
+  rescue Errno::ESPIPE
+    # Skip if we can't stream.tell
+  end
+
+  def test_silence_stream_closes_file_descriptors
+    before_open_file_descriptors = ObjectSpace.each_object(IO).select { |io| io.fileno rescue false }.count
+    silence_stream(STDOUT) { STDOUT.puts 'hello world' }
+    assert_equal before_open_file_descriptors, ObjectSpace.each_object(IO).select { |io| io.fileno rescue false }.count
+  end
+
   def test_quietly
     old_stdout_position, old_stderr_position = STDOUT.tell, STDERR.tell
     quietly do
